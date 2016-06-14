@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // GetField returns the value of the provided obj field. obj can whether
@@ -61,7 +62,7 @@ func GetFieldTag(obj interface{}, fieldName, tagKey string) (string, error) {
 
 	objValue := reflectValue(obj)
 	objType := objValue.Type()
-	
+
 	field, ok := objType.FieldByName(fieldName)
 	if !ok {
 		return "", fmt.Errorf("No such field: %s in obj", fieldName)
@@ -79,8 +80,11 @@ func GetFieldTag(obj interface{}, fieldName, tagKey string) (string, error) {
 // value type should match with the struct field you're trying to set.
 func SetField(obj interface{}, name string, value interface{}) error {
 	// Fetch the field reflect.Value
-	structValue := reflect.ValueOf(obj).Elem()
-	structFieldValue := structValue.FieldByName(name)
+	//	structValue := reflect.ValueOf(obj).Elem()
+	structFieldValue, err := getStructFieldValue(obj, name)
+	if err != nil {
+		return err
+	}
 
 	if !structFieldValue.IsValid() {
 		return fmt.Errorf("No such field: %s in obj", name)
@@ -100,6 +104,25 @@ func SetField(obj interface{}, name string, value interface{}) error {
 
 	structFieldValue.Set(val)
 	return nil
+}
+
+func getStructFieldValue(obj interface{}, name string) (reflect.Value, error) {
+	if i := strings.Index(name, "."); i > -1 {
+		rv := reflect.Value{}
+		currFieldName := name[0:i]
+		objValue := reflectValue(obj)
+		field := objValue.FieldByName(currFieldName)
+		if !field.IsValid() {
+			return rv, fmt.Errorf("No such field: %s in obj", currFieldName)
+		}
+		if !isStruct(field) {
+			return rv, fmt.Errorf("Field %s expected to be an struct", currFieldName)
+		}
+		nextFieldName := name[i+1 : len(name)]
+		return getStructFieldValue(field.Interface(), nextFieldName)
+	}
+	structValue := reflect.ValueOf(obj).Elem()
+	return structValue.FieldByName(name), nil
 }
 
 // HasField checks if the provided field name is part of a struct. obj can whether
@@ -193,15 +216,15 @@ func Tags(obj interface{}, key string) (map[string]string, error) {
 }
 
 func reflectValue(obj interface{}) reflect.Value {
-    var val reflect.Value
+	var val reflect.Value
 
-    if reflect.TypeOf(obj).Kind() == reflect.Ptr {
-        val = reflect.ValueOf(obj).Elem()
-    } else {
-        val = reflect.ValueOf(obj)
-    }
+	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
+		val = reflect.ValueOf(obj).Elem()
+	} else {
+		val = reflect.ValueOf(obj)
+	}
 
-    return val
+	return val
 }
 
 func isExportableField(field reflect.StructField) bool {
@@ -209,7 +232,7 @@ func isExportableField(field reflect.StructField) bool {
 	return field.PkgPath == ""
 }
 
-func hasValidType(obj interface{}, types []reflect.Kind) bool{
+func hasValidType(obj interface{}, types []reflect.Kind) bool {
 	for _, t := range types {
 		if reflect.TypeOf(obj).Kind() == t {
 			return true

@@ -5,15 +5,27 @@
 package reflections
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
 	"reflect"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestStruct struct {
 	unexported uint64
 	Dummy      string `test:"dummytag"`
 	Yummy      int    `test:"yummytag"`
+}
+
+type TestNestedStruct struct {
+	unexported uint64
+	Dummy      string `test:"dummytag"`
+	Yummy      int    `test:"yummytag"`
+	Nested     *NestedStruct
+}
+
+type NestedStruct struct {
+	Dummy string
 }
 
 func TestGetField_on_struct(t *testing.T) {
@@ -168,12 +180,24 @@ func TestSetField_on_struct_with_valid_value_type(t *testing.T) {
 	assert.Equal(t, dummyStruct.Dummy, "abc")
 }
 
-// func TestSetField_on_non_struct(t *testing.T) {
-//     dummy := "abc 123"
+func TestSetField_on_inner_struct_with_valid_value_type(t *testing.T) {
+	dummyStruct := TestNestedStruct{
+		Dummy: "test",
+		Nested: &NestedStruct{
+			Dummy: "nested",
+		},
+	}
+	err := SetField(&dummyStruct, "Nested.Dummy", "abc")
+	assert.NoError(t, err)
+	assert.Equal(t, dummyStruct.Nested.Dummy, "abc")
+}
 
-//     err := SetField(&dummy, "Dummy", "abc")
-//     assert.Error(t, err)
-// }
+//func TestSetField_on_non_struct(t *testing.T) {
+//	dummy := "abc 123"
+
+//	//	err := SetField(&dummy, "Dummy", "abc")
+//	//	assert.Error(t, err)
+//}
 
 func TestSetField_non_existing_field(t *testing.T) {
 	dummyStruct := TestStruct{
