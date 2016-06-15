@@ -81,7 +81,7 @@ func GetFieldTag(obj interface{}, fieldName, tagKey string) (string, error) {
 func SetField(obj interface{}, name string, value interface{}) error {
 	// Fetch the field reflect.Value
 	//	structValue := reflect.ValueOf(obj).Elem()
-	structFieldValue, err := getStructFieldValue(obj, name)
+	structFieldValue, err := getStructField(obj, name)
 	if err != nil {
 		return err
 	}
@@ -106,23 +106,38 @@ func SetField(obj interface{}, name string, value interface{}) error {
 	return nil
 }
 
-func getStructFieldValue(obj interface{}, name string) (reflect.Value, error) {
+func getStructField(obj interface{}, name string) (reflect.Value, error) {
 	if i := strings.Index(name, "."); i > -1 {
 		rv := reflect.Value{}
 		currFieldName := name[0:i]
 		objValue := reflectValue(obj)
 		field := objValue.FieldByName(currFieldName)
 		if !field.IsValid() {
-			return rv, fmt.Errorf("No such field: %s in obj", currFieldName)
+			return rv, fmt.Errorf("No such field %s in obj", currFieldName)
 		}
 		if !isStruct(field) {
 			return rv, fmt.Errorf("Field %s expected to be an struct", currFieldName)
 		}
 		nextFieldName := name[i+1 : len(name)]
-		return getStructFieldValue(field.Interface(), nextFieldName)
+		return getStructField(getStructFieldValue(field), nextFieldName)
 	}
-	structValue := reflect.ValueOf(obj).Elem()
-	return structValue.FieldByName(name), nil
+	return getNestedStructField(obj, name)
+}
+
+func getStructFieldValue(field reflect.Value) interface{} {
+	if reflect.TypeOf(field.Interface()).Kind() == reflect.Ptr {
+		return field.Interface()
+	}
+	return field.Addr()
+}
+
+func getNestedStructField(obj interface{}, name string) (reflect.Value, error) {
+	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
+		structValue := reflect.ValueOf(obj).Elem()
+		return structValue.FieldByName(name), nil
+	}
+	structValue := reflect.Indirect(obj.(reflect.Value))
+	return reflect.Indirect(structValue.FieldByName(name).Addr()), nil
 }
 
 // HasField checks if the provided field name is part of a struct. obj can whether

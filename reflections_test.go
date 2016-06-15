@@ -17,11 +17,18 @@ type TestStruct struct {
 	Yummy      int    `test:"yummytag"`
 }
 
-type TestNestedStruct struct {
+type TestNestedPointerStruct struct {
 	unexported uint64
 	Dummy      string `test:"dummytag"`
 	Yummy      int    `test:"yummytag"`
 	Nested     *NestedStruct
+}
+
+type TestNestedStruct struct {
+	unexported uint64
+	Dummy      string `test:"dummytag"`
+	Yummy      int    `test:"yummytag"`
+	Nested     NestedStruct
 }
 
 type NestedStruct struct {
@@ -180,10 +187,22 @@ func TestSetField_on_struct_with_valid_value_type(t *testing.T) {
 	assert.Equal(t, dummyStruct.Dummy, "abc")
 }
 
+func TestSetField_on_inner_struct_pointer_with_valid_value_type(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{
+		Dummy: "test",
+		Nested: &NestedStruct{
+			Dummy: "nested",
+		},
+	}
+	err := SetField(&dummyStruct, "Nested.Dummy", "abc")
+	assert.NoError(t, err)
+	assert.Equal(t, dummyStruct.Nested.Dummy, "abc")
+}
+
 func TestSetField_on_inner_struct_with_valid_value_type(t *testing.T) {
 	dummyStruct := TestNestedStruct{
 		Dummy: "test",
-		Nested: &NestedStruct{
+		Nested: NestedStruct{
 			Dummy: "nested",
 		},
 	}
