@@ -260,7 +260,39 @@ func isPointer(obj interface{}) bool {
 	return reflect.TypeOf(obj).Kind() == reflect.Ptr
 }
 
+func SetDefault(s interface{}, name string, value interface{}) error {
+	return setDefaultValue(reflect.ValueOf(s), name, value)
+}
+
+func setDefaultValue(v reflect.Value, name string, value interface{}) error {
+
+	if v.Kind() != reflect.Ptr {
+		return errors.New("Not a pointer value")
+	}
+
+	v = reflect.Indirect(v)
+	switch v.Kind() {
+	case reflect.Struct:
+		currName := name
+		nextFieldName := ""
+		if i := strings.Index(name, "."); i > -1 {
+			currName = name[0:i]
+			nextFieldName = name[i+1 : len(name)]
+		}
+		err := setDefaultValue(v.FieldByName(currName).Addr(), nextFieldName, value)
+		if err != nil {
+			return err
+		}
+	default:
+		v.Set(reflect.ValueOf(value))
+
+	}
+
+	return nil
+}
+
 func getStructField(obj interface{}, name string) (reflect.Value, error) {
+	fmt.Printf("working on %v\n", name)
 	if i := strings.Index(name, "."); i > -1 {
 		rv := reflect.Value{}
 		currFieldName := name[0:i]
