@@ -80,7 +80,7 @@ func SetField(obj interface{}, name string, value interface{}) error {
 	structFieldType := structFieldValue.Type()
 	val := reflect.ValueOf(value)
 	if structFieldType != val.Type() {
-		invalidTypeError := errors.New("Provided value type didn't match obj field type")
+		invalidTypeError := fmt.Errorf("Provided value type (%v) didn't match obj field type(%v)\n", val.Type(), structFieldType)
 		return invalidTypeError
 	}
 
@@ -282,7 +282,10 @@ func getStructFieldValue(field reflect.Value) interface{} {
 	if reflect.TypeOf(field.Interface()).Kind() == reflect.Ptr {
 		return field.Interface()
 	}
-	return field.Addr()
+	if field.CanAddr() {
+		return field.Addr()
+	}
+	return field
 }
 
 func getNestedStructField(obj interface{}, name string) (reflect.Value, error) {
@@ -290,8 +293,18 @@ func getNestedStructField(obj interface{}, name string) (reflect.Value, error) {
 		structValue := reflect.ValueOf(obj).Elem()
 		return structValue.FieldByName(name), nil
 	}
-	structValue := reflect.Indirect(obj.(reflect.Value))
-	return reflect.Indirect(structValue.FieldByName(name).Addr()), nil
+	var structValue reflect.Value
+	switch obj.(type) {
+	case reflect.Value:
+		structValue = reflect.Indirect(obj.(reflect.Value))
+	default:
+		structValue = reflect.Indirect(reflectValue(obj))
+	}
+	f := structValue.FieldByName(name)
+	if f.CanAddr() {
+		return reflect.Indirect(f.Addr()), nil
+	}
+	return reflect.Indirect(f.Elem()), nil
 }
 
 func getInnerField(obj interface{}, name string) (reflect.Value, error) {
