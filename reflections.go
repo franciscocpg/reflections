@@ -123,15 +123,16 @@ func fieldsNames(obj interface{}, parent string) ([]string, error) {
 	var fields []string
 	for i := 0; i < fieldsCount; i++ {
 		field := objType.Field(i)
+		var fieldName string
 		if isExportableField(field) {
-			fieldName := field.Name
+			fieldName = field.Name
 			if len(parent) > 0 {
 				fieldName = parent + "." + fieldName
 			}
 			fields = append(fields, fieldName)
 		}
 		if k := objValue.Field(i).Kind(); k == reflect.Struct || k == reflect.Ptr {
-			nestedFields, err := fieldsNames(objValue.Field(i).Interface(), field.Name)
+			nestedFields, err := fieldsNames(objValue.Field(i).Interface(), fieldName)
 			if err == nil {
 				fields = append(fields, nestedFields...)
 			} else {
