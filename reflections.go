@@ -23,14 +23,9 @@ import (
 // GetField returns the value of the provided obj field. obj can whether
 // be a structure or pointer to structure.
 func GetField(obj interface{}, name string) (interface{}, error) {
-	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
-		return nil, errors.New("Cannot use GetField on a non-struct interface")
-	}
-
-	objValue := reflectValue(obj)
-	field := objValue.FieldByName(name)
-	if !field.IsValid() {
-		return nil, fmt.Errorf("No such field: %s in obj", name)
+	field, err := getInnerField(obj, name)
+	if err != nil {
+		return nil, err
 	}
 
 	return field.Interface(), nil
@@ -39,33 +34,20 @@ func GetField(obj interface{}, name string) (interface{}, error) {
 // GetFieldKind returns the kind of the provided obj field. obj can whether
 // be a structure or pointer to structure.
 func GetFieldKind(obj interface{}, name string) (reflect.Kind, error) {
-	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
-		return reflect.Invalid, errors.New("Cannot use GetField on a non-struct interface")
+	field, err := getInnerField(obj, name)
+	if err != nil {
+		return reflect.Invalid, err
 	}
 
-	objValue := reflectValue(obj)
-	field := objValue.FieldByName(name)
-
-	if !field.IsValid() {
-		return reflect.Invalid, fmt.Errorf("No such field: %s in obj", name)
-	}
-
-	return field.Type().Kind(), nil
+	return field.Kind(), nil
 }
 
 // GetFieldTag returns the provided obj field tag value. obj can whether
 // be a structure or pointer to structure.
 func GetFieldTag(obj interface{}, fieldName, tagKey string) (string, error) {
-	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
-		return "", errors.New("Cannot use GetField on a non-struct interface")
-	}
-
-	objValue := reflectValue(obj)
-	objType := objValue.Type()
-
-	field, ok := objType.FieldByName(fieldName)
-	if !ok {
-		return "", fmt.Errorf("No such field: %s in obj", fieldName)
+	field, err := getInnerFieldType(obj, fieldName, fieldName)
+	if err != nil {
+		return "", err
 	}
 
 	if !isExportableField(field) {
@@ -104,40 +86,6 @@ func SetField(obj interface{}, name string, value interface{}) error {
 
 	structFieldValue.Set(val)
 	return nil
-}
-
-func getStructField(obj interface{}, name string) (reflect.Value, error) {
-	if i := strings.Index(name, "."); i > -1 {
-		rv := reflect.Value{}
-		currFieldName := name[0:i]
-		objValue := reflectValue(obj)
-		field := objValue.FieldByName(currFieldName)
-		if !field.IsValid() {
-			return rv, fmt.Errorf("No such field %s in obj", currFieldName)
-		}
-		if !isStruct(field) {
-			return rv, fmt.Errorf("Field %s expected to be an struct", currFieldName)
-		}
-		nextFieldName := name[i+1 : len(name)]
-		return getStructField(getStructFieldValue(field), nextFieldName)
-	}
-	return getNestedStructField(obj, name)
-}
-
-func getStructFieldValue(field reflect.Value) interface{} {
-	if reflect.TypeOf(field.Interface()).Kind() == reflect.Ptr {
-		return field.Interface()
-	}
-	return field.Addr()
-}
-
-func getNestedStructField(obj interface{}, name string) (reflect.Value, error) {
-	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
-		structValue := reflect.ValueOf(obj).Elem()
-		return structValue.FieldByName(name), nil
-	}
-	structValue := reflect.Indirect(obj.(reflect.Value))
-	return reflect.Indirect(structValue.FieldByName(name).Addr()), nil
 }
 
 // HasField checks if the provided field name is part of a struct. obj can whether
@@ -263,4 +211,94 @@ func isStruct(obj interface{}) bool {
 
 func isPointer(obj interface{}) bool {
 	return reflect.TypeOf(obj).Kind() == reflect.Ptr
+}
+
+func getStructField(obj interface{}, name string) (reflect.Value, error) {
+	if i := strings.Index(name, "."); i > -1 {
+		rv := reflect.Value{}
+		currFieldName := name[0:i]
+		objValue := reflectValue(obj)
+		field := objValue.FieldByName(currFieldName)
+		if !field.IsValid() {
+			return rv, fmt.Errorf("No such field %s in obj", currFieldName)
+		}
+		if !isStruct(field) {
+			return rv, fmt.Errorf("Field %s expected to be an struct", currFieldName)
+		}
+		nextFieldName := name[i+1 : len(name)]
+		return getStructField(getStructFieldValue(field), nextFieldName)
+	}
+	return getNestedStructField(obj, name)
+}
+
+func getStructFieldValue(field reflect.Value) interface{} {
+	if reflect.TypeOf(field.Interface()).Kind() == reflect.Ptr {
+		return field.Interface()
+	}
+	return field.Addr()
+}
+
+func getNestedStructField(obj interface{}, name string) (reflect.Value, error) {
+	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
+		structValue := reflect.ValueOf(obj).Elem()
+		return structValue.FieldByName(name), nil
+	}
+	structValue := reflect.Indirect(obj.(reflect.Value))
+	return reflect.Indirect(structValue.FieldByName(name).Addr()), nil
+}
+
+func getInnerField(obj interface{}, name string) (reflect.Value, error) {
+	field := reflect.Value{}
+	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
+		return field, errors.New("Cannot use GetField on a non-struct interface")
+	}
+
+	objValue := reflectValue(obj)
+	if i := strings.Index(name, "."); i > -1 {
+		currFieldName := name[0:i]
+		field = objValue.FieldByName(currFieldName)
+		if !field.IsValid() {
+			return field, fmt.Errorf("No such field: %s in1 obj", name)
+		}
+		if !isStruct(field) {
+			return field, fmt.Errorf("Field %s expected to be an struct", currFieldName)
+		}
+		nextFieldName := name[i+1 : len(name)]
+		return getInnerField(field.Interface(), nextFieldName)
+	}
+	field = objValue.FieldByName(name)
+	if !field.IsValid() {
+		return field, fmt.Errorf("No such field: %s in obj", name)
+	}
+	return field, nil
+}
+
+func getInnerFieldType(obj interface{}, fullName, name string) (reflect.StructField, error) {
+	field := reflect.StructField{}
+	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
+		return field, errors.New("Cannot use GetField on a non-struct interface")
+	}
+
+	objValue := reflectValue(obj)
+	if i := strings.Index(name, "."); i > -1 {
+		currFieldName := name[0:i]
+		fieldRv := objValue.FieldByName(currFieldName)
+		if !fieldRv.IsValid() {
+			return field, fmt.Errorf("No such field: %s in obj", name)
+		}
+		if !isStruct(fieldRv) {
+			return field, fmt.Errorf("Field %s expected to be an struct", currFieldName)
+		}
+		nextFieldName := name[i+1 : len(name)]
+		return getInnerFieldType(fieldRv.Interface(), fullName, nextFieldName)
+	}
+	if !objValue.IsValid() {
+		return field, fmt.Errorf("Nil pointer: %s in obj", fullName)
+	}
+	objType := objValue.Type()
+	field, ok := objType.FieldByName(name)
+	if !ok {
+		return field, fmt.Errorf("No such field: %s in obj", name)
+	}
+	return field, nil
 }

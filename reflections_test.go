@@ -32,17 +32,41 @@ type TestNestedStruct struct {
 }
 
 type NestedStruct struct {
-	Dummy string
+	Dummy string `test:"dummytag"`
+	Yummy int    `test:"yummytag"`
 }
 
 func TestGetField_on_struct(t *testing.T) {
 	dummyStruct := TestStruct{
 		Dummy: "test",
 	}
-
 	value, err := GetField(dummyStruct, "Dummy")
 	assert.NoError(t, err)
 	assert.Equal(t, value, "test")
+}
+
+func TestGetField_on_nested_struct(t *testing.T) {
+	dummyStruct := TestNestedStruct{
+		Dummy: "test",
+		Nested: NestedStruct{
+			Dummy: "nested",
+		},
+	}
+	value, err := GetField(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, value, "nested")
+}
+
+func TestGetField_on_nested_pointer_struct(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{
+		Dummy: "test",
+		Nested: &NestedStruct{
+			Dummy: "nested",
+		},
+	}
+	value, err := GetField(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, value, "nested")
 }
 
 func TestGetField_on_struct_pointer(t *testing.T) {
@@ -53,6 +77,30 @@ func TestGetField_on_struct_pointer(t *testing.T) {
 	value, err := GetField(dummyStruct, "Dummy")
 	assert.NoError(t, err)
 	assert.Equal(t, value, "test")
+}
+
+func TestGetField_on_nested_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedStruct{
+		Dummy: "test",
+		Nested: NestedStruct{
+			Dummy: "nested",
+		},
+	}
+	value, err := GetField(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, value, "nested")
+}
+
+func TestGetField_on_nested_pointer_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedPointerStruct{
+		Dummy: "test",
+		Nested: &NestedStruct{
+			Dummy: "nested",
+		},
+	}
+	value, err := GetField(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, value, "nested")
 }
 
 func TestGetField_on_non_struct(t *testing.T) {
@@ -97,6 +145,40 @@ func TestGetFieldKind_on_struct(t *testing.T) {
 	assert.Equal(t, kind, reflect.Int)
 }
 
+func TestGetFieldKind_on_nested_struct(t *testing.T) {
+	dummyStruct := TestNestedStruct{
+		Nested: NestedStruct{
+			Dummy: "test",
+			Yummy: 123,
+		},
+	}
+
+	kind, err := GetFieldKind(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.String)
+
+	kind, err = GetFieldKind(dummyStruct, "Nested.Yummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.Int)
+}
+
+func TestGetFieldKind_on_nested_pointer_struct(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{
+		Nested: &NestedStruct{
+			Dummy: "test",
+			Yummy: 123,
+		},
+	}
+
+	kind, err := GetFieldKind(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.String)
+
+	kind, err = GetFieldKind(dummyStruct, "Nested.Yummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.Int)
+}
+
 func TestGetFieldKind_on_struct_pointer(t *testing.T) {
 	dummyStruct := &TestStruct{
 		Dummy: "test",
@@ -108,6 +190,40 @@ func TestGetFieldKind_on_struct_pointer(t *testing.T) {
 	assert.Equal(t, kind, reflect.String)
 
 	kind, err = GetFieldKind(dummyStruct, "Yummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.Int)
+}
+
+func TestGetFieldKind_on_nested_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedStruct{
+		Nested: NestedStruct{
+			Dummy: "test",
+			Yummy: 123,
+		},
+	}
+
+	kind, err := GetFieldKind(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.String)
+
+	kind, err = GetFieldKind(dummyStruct, "Nested.Yummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.Int)
+}
+
+func TestGetFieldKind_on_nested_pointer_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedPointerStruct{
+		Nested: &NestedStruct{
+			Dummy: "test",
+			Yummy: 123,
+		},
+	}
+
+	kind, err := GetFieldKind(dummyStruct, "Nested.Dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, kind, reflect.String)
+
+	kind, err = GetFieldKind(dummyStruct, "Nested.Yummy")
 	assert.NoError(t, err)
 	assert.Equal(t, kind, reflect.Int)
 }
@@ -141,6 +257,42 @@ func TestGetFieldTag_on_struct(t *testing.T) {
 	assert.Equal(t, tag, "yummytag")
 }
 
+func TestGetFieldTag_on_nested_struct(t *testing.T) {
+	dummyStruct := TestNestedStruct{}
+
+	tag, err := GetFieldTag(dummyStruct, "Nested.Dummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "dummytag")
+
+	tag, err = GetFieldTag(dummyStruct, "Nested.Yummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "yummytag")
+}
+
+func TestGetFieldTag_on_nested_pointer_struct(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{
+		Nested: &NestedStruct{},
+	}
+
+	tag, err := GetFieldTag(dummyStruct, "Nested.Dummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "dummytag")
+
+	tag, err = GetFieldTag(dummyStruct, "Nested.Yummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "yummytag")
+}
+
+func TestGetFieldTag_on_nested_nil_pointer_struct(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{}
+
+	_, err := GetFieldTag(dummyStruct, "Nested.Dummy", "test")
+	assert.Error(t, err)
+
+	_, err = GetFieldTag(dummyStruct, "Nested.Yummy", "test")
+	assert.Error(t, err)
+}
+
 func TestGetFieldTag_on_struct_pointer(t *testing.T) {
 	dummyStruct := &TestStruct{}
 
@@ -151,6 +303,42 @@ func TestGetFieldTag_on_struct_pointer(t *testing.T) {
 	tag, err = GetFieldTag(dummyStruct, "Yummy", "test")
 	assert.NoError(t, err)
 	assert.Equal(t, tag, "yummytag")
+}
+
+func TestGetFieldTag_on_nested_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedStruct{}
+
+	tag, err := GetFieldTag(dummyStruct, "Nested.Dummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "dummytag")
+
+	tag, err = GetFieldTag(dummyStruct, "Nested.Yummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "yummytag")
+}
+
+func TestGetFieldTag_on_nested_pointer_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedPointerStruct{
+		Nested: &NestedStruct{},
+	}
+
+	tag, err := GetFieldTag(dummyStruct, "Nested.Dummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "dummytag")
+
+	tag, err = GetFieldTag(dummyStruct, "Nested.Yummy", "test")
+	assert.NoError(t, err)
+	assert.Equal(t, tag, "yummytag")
+}
+
+func TestGetFieldTag_on_nested_nil_pointer_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedPointerStruct{}
+
+	_, err := GetFieldTag(dummyStruct, "Nested.Dummy", "test")
+	assert.Error(t, err)
+
+	_, err = GetFieldTag(dummyStruct, "Nested.Yummy", "test")
+	assert.Error(t, err)
 }
 
 func TestGetFieldTag_on_non_struct(t *testing.T) {
