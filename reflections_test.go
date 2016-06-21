@@ -436,6 +436,29 @@ func TestFieldsNames_on_struct(t *testing.T) {
 	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
 }
 
+func TestFieldsNames_on_nested_struct(t *testing.T) {
+	dummyStruct := TestNestedStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"Dummy", "Yummy", "Nested", "Nested.Dummy", "Nested.Yummy"}, fields)
+}
+
+func TestFieldsNames_on_nested_pointer_struct(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{
+		Dummy:  "test",
+		Yummy:  123,
+		Nested: &NestedStruct{},
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"Dummy", "Yummy", "Nested", "Nested.Dummy", "Nested.Yummy"}, fields)
+}
+
 func TestFieldsNames_on_struct_pointer(t *testing.T) {
 	dummyStruct := &TestStruct{
 		Dummy: "test",
@@ -445,6 +468,29 @@ func TestFieldsNames_on_struct_pointer(t *testing.T) {
 	fields, err := FieldsNames(dummyStruct)
 	assert.NoError(t, err)
 	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+}
+
+func TestFieldsNames_on_nested_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"Dummy", "Yummy", "Nested", "Nested.Dummy", "Nested.Yummy"}, fields)
+}
+
+func TestFieldsNames_on_nested_pointer_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedPointerStruct{
+		Dummy:  "test",
+		Yummy:  123,
+		Nested: &NestedStruct{},
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"Dummy", "Yummy", "Nested", "Nested.Dummy", "Nested.Yummy"}, fields)
 }
 
 func TestFieldsNames_on_non_struct(t *testing.T) {
@@ -489,6 +535,7 @@ func TestFields_on_struct_pointer(t *testing.T) {
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
 	expFields := []string{"Dummy", "Yummy"}
+	assert.Equal(t, len(expFields), len(fields))
 	for i, field := range fields {
 		assert.Equal(t, expFields[i], field.Name)
 	}
@@ -511,6 +558,7 @@ func TestFields_with_non_exported_fields(t *testing.T) {
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
 	expFields := []string{"Dummy", "Yummy"}
+	assert.Equal(t, len(expFields), len(fields))
 	for i, field := range fields {
 		assert.Equal(t, expFields[i], field.Name)
 	}
@@ -525,6 +573,7 @@ func TestFields_on_nested_struct(t *testing.T) {
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
 	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	assert.Equal(t, len(expFields), len(fields))
 	for i, field := range fields {
 		assert.Equal(t, expFields[i], field.Name)
 	}
@@ -532,13 +581,15 @@ func TestFields_on_nested_struct(t *testing.T) {
 
 func TestFields_on_nested_pointer_struct(t *testing.T) {
 	dummyStruct := TestNestedPointerStruct{
-		Dummy: "test",
-		Yummy: 123,
+		Dummy:  "test",
+		Yummy:  123,
+		Nested: &NestedStruct{},
 	}
 
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
 	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	assert.Equal(t, len(expFields), len(fields))
 	for i, field := range fields {
 		assert.Equal(t, expFields[i], field.Name)
 	}
@@ -553,6 +604,7 @@ func TestFields_on_nested_struct_pointer(t *testing.T) {
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
 	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	assert.Equal(t, len(expFields), len(fields))
 	for i, field := range fields {
 		assert.Equal(t, expFields[i], field.Name)
 	}
@@ -560,13 +612,15 @@ func TestFields_on_nested_struct_pointer(t *testing.T) {
 
 func TestFields_on_nested_pointer_struct_pointer(t *testing.T) {
 	dummyStruct := &TestNestedPointerStruct{
-		Dummy: "test",
-		Yummy: 123,
+		Dummy:  "test",
+		Yummy:  123,
+		Nested: &NestedStruct{},
 	}
 
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
 	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	assert.Equal(t, len(expFields), len(fields))
 	for i, field := range fields {
 		assert.Equal(t, expFields[i], field.Name)
 	}
