@@ -399,13 +399,6 @@ func TestSetField_on_inner_struct_with_valid_value_type(t *testing.T) {
 	assert.Equal(t, dummyStruct.Nested.Dummy, "abc")
 }
 
-//func TestSetField_on_non_struct(t *testing.T) {
-//	dummy := "abc 123"
-
-//	//	err := SetField(&dummy, "Dummy", "abc")
-//	//	assert.Error(t, err)
-//}
-
 func TestSetField_non_existing_field(t *testing.T) {
 	dummyStruct := TestStruct{
 		Dummy: "test",
@@ -432,6 +425,47 @@ func TestSetField_non_exported_field(t *testing.T) {
 	assert.Error(t, SetField(&dummyStruct, "unexported", "fail, bitch"))
 }
 
+func TestFieldsNames_on_struct(t *testing.T) {
+	dummyStruct := TestStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+}
+
+func TestFieldsNames_on_struct_pointer(t *testing.T) {
+	dummyStruct := &TestStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+}
+
+func TestFieldsNames_on_non_struct(t *testing.T) {
+	dummy := "abc 123"
+
+	_, err := FieldsNames(dummy)
+	assert.Error(t, err)
+}
+
+func TestFieldsNames_with_non_exported_fields(t *testing.T) {
+	dummyStruct := TestStruct{
+		unexported: 6789,
+		Dummy:      "test",
+		Yummy:      123,
+	}
+
+	fields, err := FieldsNames(dummyStruct)
+	assert.NoError(t, err)
+	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+}
+
 func TestFields_on_struct(t *testing.T) {
 	dummyStruct := TestStruct{
 		Dummy: "test",
@@ -440,7 +474,10 @@ func TestFields_on_struct(t *testing.T) {
 
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
-	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+	expFields := []string{"Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
 }
 
 func TestFields_on_struct_pointer(t *testing.T) {
@@ -451,7 +488,10 @@ func TestFields_on_struct_pointer(t *testing.T) {
 
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
-	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+	expFields := []string{"Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
 }
 
 func TestFields_on_non_struct(t *testing.T) {
@@ -470,7 +510,66 @@ func TestFields_with_non_exported_fields(t *testing.T) {
 
 	fields, err := Fields(dummyStruct)
 	assert.NoError(t, err)
-	assert.Equal(t, fields, []string{"Dummy", "Yummy"})
+	expFields := []string{"Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
+}
+
+func TestFields_on_nested_struct(t *testing.T) {
+	dummyStruct := TestNestedStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := Fields(dummyStruct)
+	assert.NoError(t, err)
+	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
+}
+
+func TestFields_on_nested_pointer_struct(t *testing.T) {
+	dummyStruct := TestNestedPointerStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := Fields(dummyStruct)
+	assert.NoError(t, err)
+	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
+}
+
+func TestFields_on_nested_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := Fields(dummyStruct)
+	assert.NoError(t, err)
+	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
+}
+
+func TestFields_on_nested_pointer_struct_pointer(t *testing.T) {
+	dummyStruct := &TestNestedPointerStruct{
+		Dummy: "test",
+		Yummy: 123,
+	}
+
+	fields, err := Fields(dummyStruct)
+	assert.NoError(t, err)
+	expFields := []string{"Dummy", "Yummy", "Nested", "Dummy", "Yummy"}
+	for i, field := range fields {
+		assert.Equal(t, expFields[i], field.Name)
+	}
 }
 
 func TestHasField_on_struct_with_existing_field(t *testing.T) {

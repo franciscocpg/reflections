@@ -105,9 +105,9 @@ func HasField(obj interface{}, name string) (bool, error) {
 	return true, nil
 }
 
-// Fields returns the struct fields names list. obj can whether
+// FieldsNames returns the struct fields names list. obj can whether
 // be a structure or pointer to structure.
-func Fields(obj interface{}) ([]string, error) {
+func FieldsNames(obj interface{}) ([]string, error) {
 	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
 		return nil, errors.New("Cannot use GetField on a non-struct interface")
 	}
@@ -121,6 +121,36 @@ func Fields(obj interface{}) ([]string, error) {
 		field := objType.Field(i)
 		if isExportableField(field) {
 			fields = append(fields, field.Name)
+		}
+	}
+
+	return fields, nil
+}
+
+// Fields returns the struct fields list. obj can whether
+// be a structure or pointer to structure.
+func Fields(obj interface{}) ([]reflect.StructField, error) {
+	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
+		return nil, errors.New("Cannot use GetField on a non-struct interface")
+	}
+
+	objValue := reflectValue(obj)
+	objType := objValue.Type()
+	fieldsCount := objType.NumField()
+
+	var fields []reflect.StructField
+	for i := 0; i < fieldsCount; i++ {
+		field := objType.Field(i)
+		if isExportableField(field) {
+			fields = append(fields, field)
+		}
+		if objValue.Field(i).Kind() == reflect.Struct {
+			nestedFields, err := Fields(objValue.Field(i).Interface())
+			if err == nil {
+				fields = append(fields, nestedFields...)
+			} else {
+				return fields, err
+			}
 		}
 	}
 

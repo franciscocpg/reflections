@@ -2,9 +2,10 @@ package reflections_test
 
 import (
 	"fmt"
-	"github.com/oleiade/reflections"
 	"log"
 	"reflect"
+
+	"github.com/oleiade/reflections"
 )
 
 type MyStruct struct {
@@ -96,7 +97,7 @@ func ExampleFields() {
 		ThirdField:  "third value",
 	}
 
-	var fields []string
+	var fields []reflect.StructField
 
 	// Fields will list every structure exportable fields.
 	// Here, it's content would be equal to:
