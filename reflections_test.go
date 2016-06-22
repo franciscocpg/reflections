@@ -404,7 +404,7 @@ func TestSetField_on_nested_struct_pointer_with_valid_value_type(t *testing.T) {
 	}
 	err := SetField(&dummyStruct, "Nested.Dummy", "abc")
 	assert.NoError(t, err)
-	assert.Equal(t, dummyStruct.Nested.Dummy, "abc")
+	assert.Equal(t, "abc", dummyStruct.Nested.Dummy)
 }
 
 func TestSetField_on_nested_struct_with_valid_value_type(t *testing.T) {
@@ -424,7 +424,7 @@ func TestSetField_on_inner_struct_with_valid_value_type(t *testing.T) {
 		Dummy: "test",
 	}
 	dummyStruct.Nested.Nested.Dummy = "cba"
-	err := SetDefault(&dummyStruct, "Nested.Nested.Dummy", "abc")
+	err := SetField(&dummyStruct, "Nested.Nested.Dummy", "abc")
 	assert.NoError(t, err)
 	assert.Equal(t, dummyStruct.Nested.Nested.Dummy, "abc")
 }
