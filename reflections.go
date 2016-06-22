@@ -60,31 +60,40 @@ func GetFieldTag(obj interface{}, fieldName, tagKey string) (string, error) {
 // SetField sets the provided obj field with provided value. obj param has
 // to be a pointer to a struct, otherwise it will soundly fail. Provided
 // value type should match with the struct field you're trying to set.
-func SetField(obj interface{}, name string, value interface{}) error {
-	// Fetch the field reflect.Value
-	//	structValue := reflect.ValueOf(obj).Elem()
-	structFieldValue, err := getStructField(obj, name)
-	if err != nil {
-		return err
+func SetField(s interface{}, name string, value interface{}) error {
+	return setField(reflect.ValueOf(s), name, name, value)
+}
+
+func setField(v reflect.Value, name string, currName string, value interface{}) error {
+
+	if v.Kind() != reflect.Ptr {
+		return errors.New("Not a pointer value")
+	}
+	v = reflect.Indirect(v)
+	switch v.Kind() {
+	case reflect.Struct, reflect.Ptr:
+		currName, nextFieldName := getCurrAndNextFieldName(currName)
+		if v.Kind() == reflect.Struct {
+			v = v.FieldByName(currName)
+		} else {
+			v = v.Elem().FieldByName(currName)
+		}
+		if !v.IsValid() {
+			return fmt.Errorf("No such field: %s in obj", name)
+		}
+		err := setField(v.Addr(), name, nextFieldName, value)
+		if err != nil {
+			return err
+		}
+	default:
+		valueOf := reflect.ValueOf(value)
+		if v.Type() != valueOf.Type() {
+			return fmt.Errorf("Provided value type (%v) didn't match obj field type (%v)\n", valueOf.Type(), v.Type())
+		}
+		v.Set(valueOf)
+
 	}
 
-	if !structFieldValue.IsValid() {
-		return fmt.Errorf("No such field: %s in obj", name)
-	}
-
-	// If obj field value is not settable an error is thrown
-	if !structFieldValue.CanSet() {
-		return fmt.Errorf("Cannot set %s field value", name)
-	}
-
-	structFieldType := structFieldValue.Type()
-	val := reflect.ValueOf(value)
-	if structFieldType != val.Type() {
-		invalidTypeError := fmt.Errorf("Provided value type (%v) didn't match obj field type(%v)\n", val.Type(), structFieldType)
-		return invalidTypeError
-	}
-
-	structFieldValue.Set(val)
 	return nil
 }
 
@@ -260,51 +269,14 @@ func isPointer(obj interface{}) bool {
 	return reflect.TypeOf(obj).Kind() == reflect.Ptr
 }
 
-func getStructField(obj interface{}, name string) (reflect.Value, error) {
+func getCurrAndNextFieldName(name string) (string, string) {
+	currName := name
+	nextFieldName := ""
 	if i := strings.Index(name, "."); i > -1 {
-		rv := reflect.Value{}
-		currFieldName := name[0:i]
-		objValue := reflectValue(obj)
-		field := objValue.FieldByName(currFieldName)
-		if !field.IsValid() {
-			return rv, fmt.Errorf("No such field %s in obj", currFieldName)
-		}
-		if !isStruct(field) {
-			return rv, fmt.Errorf("Field %s expected to be an struct", currFieldName)
-		}
-		nextFieldName := name[i+1 : len(name)]
-		return getStructField(getStructFieldValue(field), nextFieldName)
+		currName = name[0:i]
+		nextFieldName = name[i+1 : len(name)]
 	}
-	return getNestedStructField(obj, name)
-}
-
-func getStructFieldValue(field reflect.Value) interface{} {
-	if reflect.TypeOf(field.Interface()).Kind() == reflect.Ptr {
-		return field.Interface()
-	}
-	if field.CanAddr() {
-		return field.Addr()
-	}
-	return field
-}
-
-func getNestedStructField(obj interface{}, name string) (reflect.Value, error) {
-	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
-		structValue := reflect.ValueOf(obj).Elem()
-		return structValue.FieldByName(name), nil
-	}
-	var structValue reflect.Value
-	switch obj.(type) {
-	case reflect.Value:
-		structValue = reflect.Indirect(obj.(reflect.Value))
-	default:
-		structValue = reflect.Indirect(reflectValue(obj))
-	}
-	f := structValue.FieldByName(name)
-	if f.CanAddr() {
-		return reflect.Indirect(f.Addr()), nil
-	}
-	return reflect.Indirect(f.Elem()), nil
+	return currName, nextFieldName
 }
 
 func getInnerField(obj interface{}, name string) (reflect.Value, error) {
