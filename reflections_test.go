@@ -783,12 +783,41 @@ func TestItems_on_non_struct(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCopy_ignoring_not_founded_fields(t *testing.T) {
-	dummyStruct1 := TestNestedStruct{
+func TestCopy_with_default_values(t *testing.T) {
+	dummyStruct1 := TestStruct{
 		Dummy: "test",
-		Nested: NestedStruct{
-			Dummy: "nested",
-		},
+		Yummy: 0,
+	}
+	dummyStruct2 := TestStruct{
+		Dummy: "test1",
+		Yummy: 1,
+	}
+	err := Copy(dummyStruct1, &dummyStruct2)
+	assert.NoError(t, err)
+	assert.Equal(t, dummyStruct1.Dummy, dummyStruct2.Dummy)
+	assert.Equal(t, dummyStruct1.Yummy, dummyStruct2.Yummy)
+}
+
+func TestCopy_not_copying_zero_values(t *testing.T) {
+	DefaultCopyOptions.CopyZeroValues = false
+	dummyStruct1 := TestStruct{
+		Dummy: "test",
+		Yummy: 0,
+	}
+	dummyStruct2 := TestStruct{
+		Dummy: "test1",
+		Yummy: 1,
+	}
+	err := Copy(dummyStruct1, &dummyStruct2)
+	assert.NoError(t, err)
+	assert.Equal(t, dummyStruct1.Dummy, dummyStruct2.Dummy)
+	assert.Equal(t, 1, dummyStruct2.Yummy)
+}
+
+func TestCopy_ignoring_not_founded_fields(t *testing.T) {
+	DefaultCopyOptions.IgnoreNotFoundedFields = true
+	dummyStruct1 := TestStruct{
+		Dummy: "test",
 	}
 
 	dummyStruct2 := TestDummyOnlyStruct{
@@ -801,23 +830,22 @@ func TestCopy_ignoring_not_founded_fields(t *testing.T) {
 }
 
 func TestCopy_not_ignoring_not_founded_fields(t *testing.T) {
-	dummyStruct1 := TestNestedStruct{
+	DefaultCopyOptions.IgnoreNotFoundedFields = false
+	dummyStruct1 := TestStruct{
 		Dummy: "test",
-		Nested: NestedStruct{
-			Dummy: "nested",
-		},
+		Yummy: 1,
 	}
 
 	dummyStruct2 := TestDummyOnlyStruct{
 		Dummy: "test1",
 	}
-	DefaultCopyOptions.IgnoreNotFoundedFields = false
 
 	err := Copy(dummyStruct1, &dummyStruct2)
 	assert.Error(t, err)
 }
 
 func TestCopy_on_nested_struct(t *testing.T) {
+	DefaultCopyOptions.IgnoreNotFoundedFields = true
 	dummyStruct1 := TestNestedStruct{
 		Dummy: "test",
 		Nested: NestedStruct{
