@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type TestDummyOnlyStruct struct {
+	unexported uint64
+	Dummy      string `test:"dummytag"`
+}
+
 type TestStruct struct {
 	unexported uint64
 	Dummy      string `test:"dummytag"`
@@ -776,4 +781,93 @@ func TestItems_on_non_struct(t *testing.T) {
 
 	_, err := Items(dummy)
 	assert.Error(t, err)
+}
+
+func TestCopy_ignoring_not_founded_fields(t *testing.T) {
+	dummyStruct1 := TestNestedStruct{
+		Dummy: "test",
+		Nested: NestedStruct{
+			Dummy: "nested",
+		},
+	}
+
+	dummyStruct2 := TestDummyOnlyStruct{
+		Dummy: "test1",
+	}
+
+	err := Copy(dummyStruct1, &dummyStruct2)
+	assert.NoError(t, err)
+	assert.Equal(t, dummyStruct1.Dummy, dummyStruct2.Dummy)
+}
+
+func TestCopy_not_ignoring_not_founded_fields(t *testing.T) {
+	dummyStruct1 := TestNestedStruct{
+		Dummy: "test",
+		Nested: NestedStruct{
+			Dummy: "nested",
+		},
+	}
+
+	dummyStruct2 := TestDummyOnlyStruct{
+		Dummy: "test1",
+	}
+	DefaultCopyOptions.IgnoreNotFoundedFields = false
+
+	err := Copy(dummyStruct1, &dummyStruct2)
+	assert.Error(t, err)
+}
+
+func TestCopy_on_nested_struct(t *testing.T) {
+	dummyStruct1 := TestNestedStruct{
+		Dummy: "test",
+		Nested: NestedStruct{
+			Dummy: "nested",
+		},
+	}
+
+	dummyStruct2 := TestNestedStruct{
+		Dummy: "test1",
+		Nested: NestedStruct{
+			Dummy: "nested1",
+		},
+	}
+
+	err := Copy(dummyStruct1, &dummyStruct2)
+	assert.NoError(t, err)
+	assert.Equal(t, dummyStruct1.Dummy, dummyStruct2.Dummy)
+	assert.Equal(t, dummyStruct1.Nested.Dummy, dummyStruct2.Nested.Dummy)
+}
+
+func TestIsZeroValue(t *testing.T) {
+	var i int
+	var f float64
+	var b bool
+	var s string
+	st := TestStruct{}
+	assert.True(t, IsZeroValue(i))
+	assert.True(t, IsZeroValue(f))
+	assert.True(t, IsZeroValue(b))
+	assert.True(t, IsZeroValue(s))
+	assert.True(t, IsZeroValue(st))
+	assert.True(t, IsZeroValue(nil))
+	i = 1
+	f = 1.0
+	b = true
+	s = "1"
+	pSt := &TestStruct{}
+	assert.False(t, IsZeroValue(i))
+	assert.False(t, IsZeroValue(f))
+	assert.False(t, IsZeroValue(b))
+	assert.False(t, IsZeroValue(s))
+	assert.False(t, IsZeroValue(pSt))
+}
+
+func items(obj interface{}) map[string]interface{} {
+	m, _ := Items(obj)
+	return m
+}
+
+func fields(obj interface{}) []string {
+	f, _ := FieldsNames(obj)
+	return f
 }

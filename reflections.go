@@ -20,6 +20,22 @@ import (
 	"strings"
 )
 
+type (
+	// CopyOptions are options for copy function
+	CopyOptions struct {
+		CopyZeroValues         bool
+		IgnoreNotFoundedFields bool
+	}
+)
+
+var (
+	// DefaultCopyOptions are the default options for copy function
+	DefaultCopyOptions = CopyOptions{
+		CopyZeroValues:         true,
+		IgnoreNotFoundedFields: true,
+	}
+)
+
 // GetField returns the value of the provided obj field. obj can whether
 // be a structure or pointer to structure.
 func GetField(obj interface{}, name string) (interface{}, error) {
@@ -232,6 +248,48 @@ func Tags(obj interface{}, key string) (map[string]string, error) {
 	}
 
 	return tags, nil
+}
+
+// Copy copies all values from "from" to "to" with
+// DefaultCopyOptions
+func Copy(from interface{}, to interface{}) error {
+	return CopyWithOptions(from, to, DefaultCopyOptions)
+}
+
+// CopyWithOptions copies all values from "from" to "to" with
+// CopyOptions
+func CopyWithOptions(from interface{}, to interface{}, options CopyOptions) error {
+	if !isPointer(to) {
+		return errors.New("To must be a pointer")
+	}
+	fromFields, err := FieldsNames(from)
+	if err != nil {
+		return err
+	}
+	_, err = FieldsNames(to)
+	if err != nil {
+		return err
+	}
+	for _, field := range fromFields {
+		v, err := GetField(from, field)
+		if err != nil {
+			return err
+		}
+		if !options.CopyZeroValues && IsZeroValue(v) {
+			continue
+		}
+		err = SetField(to, field, v)
+		if !options.IgnoreNotFoundedFields && err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IsZeroValue indicates if the interface has value
+// according to golang spec: https://golang.org/ref/spec#The_zero_value
+func IsZeroValue(i interface{}) bool {
+	return i == nil || reflect.DeepEqual(i, reflect.Zero(reflect.TypeOf(i)).Interface())
 }
 
 func reflectValue(obj interface{}) reflect.Value {
